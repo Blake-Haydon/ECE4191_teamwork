@@ -19,6 +19,7 @@ def p_server():
     print(f"connected to {address} on port {PORT}")
     while True:
         data = client.recv(1024)
+        # TODO: Write other robots values to memory
         print(data)
 
 
@@ -37,9 +38,13 @@ def p_client():
             sleep(1)  # retry connection in 1 second
 
     while True:
-        client_socket.send(bytes("yooooo whats upppp", "UTF-8"))
+        # TODO: write own robots values to socket
+        client_socket.send(bytes("x,y,z", "UTF-8"))
         sleep(1)
 
+
+# def format_data(x, y, z, ...):
+#     return data
 
 if __name__ == "__main__":
     Thread(target=p_server).start()
