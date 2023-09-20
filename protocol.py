@@ -5,7 +5,6 @@ from threading import Thread
 from multiprocessing import Value, Event
 
 DELAY = 0.1  # seconds
-
 PORT = 12345
 OTHER_IP = "192.168.50.201"  # TODO: change this for other robot
 
@@ -112,14 +111,7 @@ def p_client():
     print("INFO: closed client socket")
 
 
-if __name__ == "__main__":
-    server_thread = Thread(target=p_server)
-    client_thread = Thread(target=p_client)
-
-    # Start the threads
-    server_thread.start()
-    client_thread.start()
-
+def _test_state_updates():
     try:
         # Dummy global variables to test this function
         for i in range(10):
@@ -131,7 +123,20 @@ if __name__ == "__main__":
             sleep(DELAY)
 
     except KeyboardInterrupt:
-        print("Keyboard interrupt detected.")
+        print("WARNING: Keyboard interrupt detected")
+
+
+if __name__ == "__main__":
+    # Create server and client threads
+    server_thread = Thread(target=p_server)
+    client_thread = Thread(target=p_client)
+
+    # Start threads
+    server_thread.start()
+    client_thread.start()
+
+    # Test the state updates
+    _test_state_updates()
 
     # Set the event to signal all threads to stop
     stop_protocol.set()

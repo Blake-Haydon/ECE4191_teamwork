@@ -1,1 +1,64 @@
-# teamwork
+# Simple State Protocol (SSP)
+
+## Overview
+
+The Simple State Protocol (SSP) is a simple protocol for sending state updates from
+one robot to another. The protocol is designed to be simple to implement and
+easy to extend.
+
+## Setup
+
+### 1. Set IP
+
+Set the IP of the other robot in the `protocol.py` file.
+
+```python
+OTHER_IP = "192.168.1.1" # PLACE YOUR IP HERE
+```
+
+### 2. Integrate Code
+
+To integrate the protocol into your project you need to copy the following code into your main thread.
+
+```python
+# Create server and client threads
+server_thread = Thread(target=p_server)
+client_thread = Thread(target=p_client)
+
+# Start threads
+server_thread.start()
+client_thread.start()
+
+# Set the event to signal all threads to stop
+stop_protocol.set()
+
+# Wait for threads to finish
+server_thread.join()
+client_thread.join()
+```
+
+### 3. Receive State Updates
+
+To test the protocol you can run the `protocol.py` file. This will send 10 state updates to the other robot.
+
+Below is an example of the output from the `protocol.py` file.
+
+```bash
+python protocol.py
+
+INFO: client connected successfully to 192.168.50.201 on port 12345
+INFO: server started at 192.168.50.201 on port 12345
+INFO: data received {'x': 0.0, 'y': 1.0, 'theta': 2.0, 'mode': 0, 'lane': 0}
+INFO: data received {'x': 1.0, 'y': 2.0, 'theta': 3.0, 'mode': 0, 'lane': 0}
+INFO: data received {'x': 2.0, 'y': 3.0, 'theta': 4.0, 'mode': 0, 'lane': 0}
+INFO: data received {'x': 2.0, 'y': 3.0, 'theta': 4.0, 'mode': 0, 'lane': 0}
+INFO: data received {'x': 3.0, 'y': 4.0, 'theta': 5.0, 'mode': 0, 'lane': 0}
+INFO: data received {'x': 4.0, 'y': 5.0, 'theta': 6.0, 'mode': 0, 'lane': 0}
+INFO: data received {'x': 5.0, 'y': 6.0, 'theta': 7.0, 'mode': 0, 'lane': 0}
+INFO: data received {'x': 6.0, 'y': 7.0, 'theta': 8.0, 'mode': 0, 'lane': 0}
+INFO: data received {'x': 8.0, 'y': 9.0, 'theta': 10.0, 'mode': 0, 'lane': 0}
+INFO: data received {'x': 9.0, 'y': 10.0, 'theta': 11.0, 'mode': 0, 'lane': 0}
+INFO: closed client socket
+INFO: closed server socket
+INFO: all threads finished!
+```
