@@ -16,12 +16,10 @@ def p_server():
     print("the server is online...")
 
     client, address = server_socket.accept()
-    print(f"connected to {address}")
+    print(f"connected to {address} on port {PORT}")
     while True:
         data = client.recv(1024)
-        print()
-        if data:
-            print(data)
+        print(data)
 
 
 def p_client():
@@ -35,11 +33,8 @@ def p_client():
             connected = True
         except Exception as e:
             client_socket.close()
-
-            print("AAAAHH AN ERROR!!")
-            print(e)
-
-            sleep(1)
+            print(e)  # print the error
+            sleep(1)  # retry connection in 1 second
 
     while True:
         client_socket.send(bytes("yooooo whats upppp", "UTF-8"))
