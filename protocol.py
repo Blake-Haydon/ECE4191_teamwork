@@ -68,6 +68,9 @@ def p_client():
             client_socket.close()
             print(e)  # print the error
 
+# def format_data(x, y, z, ...):
+#     return data
+
 if __name__ == "__main__":
     Thread(target=p_server).start()
     Thread(target=p_client).start()
