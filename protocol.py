@@ -1,107 +1,143 @@
 import socket
-from threading import Thread
+from enum import Enum
 from time import sleep
-import multiprocessing as mp
-import time
+from threading import Thread
+from multiprocessing import Value, Event
+
+DELAY = 0.1  # seconds
 
 PORT = 12345
-HOST = "0.0.0.0"
-DELAY = 0.5 # Delay in seconds
+OTHER_IP = "192.168.50.201"  # TODO: change this for other robot
 
-DESTINATION = "172.20.10.13"  # TODO: this need to change for each user
-# DESTINATION = "172.20.10.6"  # TODO: this need to change for each user
+
+class Lane(Enum):
+    A = 0
+    B = 1
+    C = 2
+
+
+class Mode(Enum):
+    L = 0
+    G = 1
+
 
 # Global variable to indicate if threads should stop
-should_stop = mp.Event()
+stop_protocol = Event()
 
-# Initialising global dummy variables for now (change later)
-# self global variables
-our_x = mp.Value("f", 0.0) # probably should be initialised to a purposeful value in loading zone
-our_y = mp.Value("f", 0.0) # probably should be initialised to a purposeful value in loading zone
-our_theta = mp.Value("f", 90.0) # could be 0 to start off with
-our_mode = mp.Value("c", b'L') # either L or G. start in loading zone
-our_lane = mp.Value("c", b' ') # either A B or C
-# other robot global variables
-their_x = mp.Value("f", 0.0) 
-their_y = mp.Value("f", 0.0)
-their_theta = mp.Value("f", 90.0)
-their_mode = mp.Value("c", b'L')
-their_lane = mp.Value("c", b' ')
+# global variables for our robot
+x = Value("f", 0.0)
+y = Value("f", 0.0)
+theta = Value("f", 90.0)  # could be 0 to start off with
+mode = Value("i", Mode.L.value)  # either L or G. start in loading zone
+lane = Value("i", Lane.A.value)  # either A B or C
+
+# global variables for other robot
+other_x = Value("f", 0.0)
+other_y = Value("f", 0.0)
+other_theta = Value("f", 90.0)
+other_mode = Value("i", Mode.L.value)
+other_lane = Value("i", Lane.A.value)
+
+
+def encode_data(x, y, theta, mode, lane):
+    """Encode the data into a string to send over the network"""
+    return f"{x},{y},{theta},{mode},{lane}".encode("utf-8")
+
+
+def decode_data(data: bytes):
+    """Decode the data received from the network"""
+    vars = data.decode("utf-8").split(",")
+
+    if len(vars) != 5:
+        return None
+
+    return {
+        "x": float(vars[0]),  # in meters
+        "y": float(vars[1]),  # in meters
+        "theta": float(vars[2]),  # in radians
+        "mode": int(vars[3]),  # either L or G (see enum for loading or goal values)
+        "lane": int(vars[4]),  # either A, B or C (see enum for values)
+    }
+
+
+def update_other_state(data):
+    """Update the state of the other robot"""
+    other_x.value = data["x"]
+    other_y.value = data["y"]
+    other_theta.value = data["theta"]
+    other_mode.value = data["mode"]
+    other_lane.value = data["lane"]
+
 
 def p_server():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((HOST, PORT))
+    server_socket.bind(("", PORT))  # "" means accept connections from all addresses
     server_socket.listen(1)
-    print("the server is online...")
 
+    # accept incoming connection
     client, address = server_socket.accept()
-    print(f"connected to {address} on port {PORT}")
-    while not should_stop.is_set():
-        data = client.recv(1024)
-        decoded_data = data.decode("utf-8")
-        variables = decoded_data.split(',')
+    print(f"INFO: server started at {address[0]} on port {PORT}")
 
-        if variables[0].strip():  # Check if the first element is not an empty string
-            try:
-                their_x.value = float(variables[0].strip())
-                their_y.value = float(variables[1].strip())
-                their_theta.value = float(variables[2].strip())
-                
-                # TODO: fix the b'G' format issue in mode and lane variables to just print out a 'G'. Not sure if issue with how i'm initialising the character
-                print(f"Mode = {variables[3]}, Encoded mode = {variables[3].encode('utf-8')[0]}")
-                their_mode.value = variables[3].encode("utf-8")[0]
-                their_lane.value = variables[4].encode("utf-8")[0]
-                print(f"Their values = {their_x.value},{their_y.value},{their_theta.value},{their_mode.value},{their_lane.value}")
-            except ValueError:
-                print("Error: Could not convert the string to a float.")
-        else:
-            print("Error: Empty string received.")
-    # return their_x, their_y, their_theta, their_mode, their_lane
+    while not stop_protocol.is_set():
+        data = decode_data(client.recv(1024))
+        if data is not None:
+            update_other_state(data)
+            print(f"INFO: data received {data}")
+
+    server_socket.close()
+    print("INFO: closed server socket")
+
 
 def p_client():
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    connected = False
-
-    while not connected:
+    while True:
         try:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.connect((DESTINATION, PORT))
-            connected = True
-            print("client connected successfully")
+            client_socket.connect((OTHER_IP, PORT))
+            print(f"INFO: client connected successfully to {OTHER_IP} on port {PORT}")
+            break
         except Exception as e:
-            print("exception 1 handled")
             client_socket.close()
-            print(e)  # print the error
+            print(f"ERROR: {e}")
             sleep(1)  # retry connection in 1 second
 
-    while not should_stop.is_set():
+    while not stop_protocol.is_set():
         try:
-            text = f'{our_x.value},{our_y.value},{our_theta.value},{our_mode.value},{our_lane.value}'
-            client_socket.send(bytes(text, "UTF-8"))
+            data = encode_data(x.value, y.value, theta.value, mode.value, lane.value)
+            client_socket.send(data)
             sleep(DELAY)
         except Exception as e:
-            print("exception 2 handled")
-            client_socket.close()
-            print(e)  # print the error
+            print(f"ERROR: {e}")
 
-# def format_data(x, y, z, ...):
-#     return data
+    client_socket.close()
+    print("INFO: closed client socket")
+
 
 if __name__ == "__main__":
-    Thread(target=p_server).start()
-    Thread(target=p_client).start()
+    server_thread = Thread(target=p_server)
+    client_thread = Thread(target=p_client)
+
+    # Start the threads
+    server_thread.start()
+    client_thread.start()
+
     try:
-        while not should_stop.is_set():
-            # Dummy global variables to test this function
-            for i in range(50):
-                print(f"Our values = {our_x.value},{our_y.value},{our_theta.value},{our_mode.value},{our_lane.value}") # testing the values are right
-                our_x.value = i
-                our_y.value = i+1
-                our_theta.value = i+2
-                our_mode.value = b'G'
-                our_lane.value = b'B'
-                time.sleep(DELAY) # simulating delay between updates
+        # Dummy global variables to test this function
+        for i in range(10):
+            x.value = i
+            y.value = i + 1
+            theta.value = i + 2
+            mode.value = Mode.L.value
+            lane.value = Lane.A.value
+            sleep(DELAY)
+
     except KeyboardInterrupt:
-        print('Keyboard interrupt detected.')
-        # Set the event to signal all threads to stop
-        should_stop.set()
+        print("Keyboard interrupt detected.")
+
+    # Set the event to signal all threads to stop
+    stop_protocol.set()
+
+    # Wait for threads to finish
+    server_thread.join()
+    client_thread.join()
+
+    print("INFO: all threads finished!")
