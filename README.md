@@ -23,19 +23,27 @@ To integrate the protocol into your project you need to copy the following code 
 
 ```python
 # Create server and client threads
-server_thread = Thread(target=p_server)
-client_thread = Thread(target=p_client)
+server_thread = Thread(target=protocol.p_server)
+client_thread = Thread(target=protocol.p_client)
 
 # Start threads
 server_thread.start()
 client_thread.start()
 
 # Set the event to signal all threads to stop
-stop_protocol.set()
+protocol.stop_protocol.set()
 
 # Wait for threads to finish
 server_thread.join()
 client_thread.join()
+```
+
+And include the following import modules to handle threading and defining the global variables (including importing the protocol.py file itself):
+
+```python
+from threading import Thread
+from multiprocessing import Value, Event
+import protocol
 ```
 
 ### 3. Receive State Updates
