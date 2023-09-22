@@ -3,11 +3,13 @@ from enum import Enum
 from time import sleep
 from threading import Thread
 from multiprocessing import Value, Event
+import time
 
 DELAY = 0.1  # seconds
 PORT = 12345
-OTHER_IP = "192.168.50.201"  # TODO: change this for other robot
-
+# OTHER_IP = "192.168.50.201"  # TODO: change this for other robot
+# OTHER_IP = "172.20.10.13" # Team 18 robot
+OTHER_IP = "127.0.0.1" # Loopback testing IP
 
 class Lane(Enum):
     A = 0
@@ -26,7 +28,7 @@ stop_protocol = Event()
 # global variables for our robot
 x = Value("f", 0.0)
 y = Value("f", 0.0)
-theta = Value("f", 90.0)  # could be 0 to start off with
+theta = Value("f", 90.0)  # could be 0 to start off with, referenced to 0 = +x-axis
 mode = Value("i", Mode.L.value)  # either L or G. start in loading zone
 lane = Value("i", Lane.A.value)  # either A B or C
 
@@ -70,7 +72,7 @@ def update_other_state(data):
 
 def p_server():
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind(("", PORT))  # "" means accept connections from all addresses
+    server_socket.bind((OTHER_IP, PORT))  # ("" in HOST slot means accept connections from all addresses)
     server_socket.listen(1)
 
     # accept incoming connection
@@ -82,6 +84,7 @@ def p_server():
         if data is not None:
             update_other_state(data)
             print(f"INFO: data received {data}")
+
 
     server_socket.close()
     print("INFO: closed server socket")
@@ -114,16 +117,18 @@ def p_client():
 def _test_state_updates():
     try:
         # Dummy global variables to test this function
-        for i in range(10):
+        for i in range(20):
             x.value = i
             y.value = i + 1
             theta.value = i + 2
-            mode.value = Mode.L.value
-            lane.value = Lane.A.value
+            mode.value = Mode.G.value
+            lane.value = Lane.C.value
             sleep(DELAY)
 
     except KeyboardInterrupt:
         print("WARNING: Keyboard interrupt detected")
+        # Set the event to signal all threads to stop
+        stop_protocol.set()
 
 
 if __name__ == "__main__":
