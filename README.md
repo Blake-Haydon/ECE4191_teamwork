@@ -13,7 +13,8 @@ easy to extend.
 Set the IP of the other robot in the `protocol.py` file.
 
 ```python
-OTHER_IP = "192.168.1.1" # PLACE YOUR IP HERE
+OTHER_IP = "XXX.XXX.X.X" # PLACE YOUR IP HERE
+OTHER_IP = "127.0.0.1" # use this loopback IP address for testing within your own device
 ```
 
 ### 2. Integrate Code
