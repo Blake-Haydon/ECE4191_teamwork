@@ -23,19 +23,19 @@ To integrate the protocol into your project you need to copy the following code 
 
 ```python
 # Create server and client threads
-server_thread = Thread(target=protocol.p_server)
-client_thread = Thread(target=protocol.p_client)
+t_server = Thread(target=protocol.p_server)
+t_client = Thread(target=protocol.p_client)
 
 # Start threads
-server_thread.start()
-client_thread.start()
+t_server.start()
+t_client.start()
 
 # Set the event to signal all threads to stop
 protocol.stop_protocol.set()
 
 # Wait for threads to finish
-server_thread.join()
-client_thread.join()
+t_server.join()
+t_client.join()
 ```
 
 And include the following import modules to handle threading and defining the
