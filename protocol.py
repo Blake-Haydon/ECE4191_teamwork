@@ -3,13 +3,7 @@ from enum import Enum
 from time import sleep
 from threading import Thread
 from multiprocessing import Value, Event
-import time
 
-DELAY = 0.1  # seconds
-PORT = 12345
-# OTHER_IP = "192.168.50.201"  # TODO: change this for other robot
-# OTHER_IP = "172.20.10.13" # Team 18 robot
-OTHER_IP = "127.0.0.1" # Loopback testing IP
 
 class Lane(Enum):
     A = 0
@@ -20,24 +14,6 @@ class Lane(Enum):
 class Mode(Enum):
     L = 0
     G = 1
-
-
-# Global variable to indicate if threads should stop
-stop_protocol = Event()
-
-# global variables for our robot
-x = Value("f", 0.0)
-y = Value("f", 0.0)
-theta = Value("f", 90.0)  # could be 0 to start off with, referenced to 0 = +x-axis
-mode = Value("i", Mode.L.value)  # either L or G. start in loading zone
-lane = Value("i", Lane.A.value)  # either A B or C
-
-# global variables for other robot
-other_x = Value("f", 0.0)
-other_y = Value("f", 0.0)
-other_theta = Value("f", 90.0)
-other_mode = Value("i", Mode.L.value)
-other_lane = Value("i", Lane.A.value)
 
 
 def encode_data(x, y, theta, mode, lane):
@@ -63,91 +39,121 @@ def decode_data(data: bytes):
 
 def update_other_state(data):
     """Update the state of the other robot"""
-    other_x.value = data["x"]
-    other_y.value = data["y"]
-    other_theta.value = data["theta"]
-    other_mode.value = data["mode"]
-    other_lane.value = data["lane"]
+    global_other_x.value = data["x"]
+    global_other_y.value = data["y"]
+    global_other_theta.value = data["theta"]
+    global_other_mode.value = data["mode"]
+    global_other_lane.value = data["lane"]
 
 
-def p_server():
+def server(event_stop_protocol, port=12345):
     server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    server_socket.bind((OTHER_IP, PORT))  # ("" in HOST slot means accept connections from all addresses)
+    server_socket.bind(("", port))  # "" means accept connections from all addresses
     server_socket.listen(1)
 
     # accept incoming connection
     client, address = server_socket.accept()
-    print(f"INFO: server started at {address[0]} on port {PORT}")
+    print(f"INFO: server started at {address[0]} on port {port}")
 
-    while not stop_protocol.is_set():
+    while not event_stop_protocol.is_set():
         data = decode_data(client.recv(1024))
         if data is not None:
             update_other_state(data)
             print(f"INFO: data received {data}")
 
-
     server_socket.close()
     print("INFO: closed server socket")
 
 
-def p_client():
+def client(event_stop_protocol, event_send_data, ip, port=12345):
     while True:
         try:
             client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            client_socket.connect((OTHER_IP, PORT))
-            print(f"INFO: client connected successfully to {OTHER_IP} on port {PORT}")
+            client_socket.connect((ip, port))
+            print(f"INFO: client connected successfully to {ip} on port {port}")
             break
         except Exception as e:
             client_socket.close()
             print(f"ERROR: {e}")
             sleep(1)  # retry connection in 1 second
 
-    while not stop_protocol.is_set():
+    while not event_stop_protocol.is_set():
         try:
-            data = encode_data(x.value, y.value, theta.value, mode.value, lane.value)
+            data = encode_data(
+                global_x.value,
+                global_y.value,
+                global_theta.value,
+                global_mode.value,
+                global_lane.value,
+            )
             client_socket.send(data)
-            sleep(DELAY)
         except Exception as e:
             print(f"ERROR: {e}")
+
+        event_send_data.clear()
+        event_send_data.wait()  # wait for new data to be available
 
     client_socket.close()
     print("INFO: closed client socket")
 
 
-def _test_state_updates():
-    try:
-        # Dummy global variables to test this function
-        for i in range(20):
-            x.value = i
-            y.value = i + 1
-            theta.value = i + 2
-            mode.value = Mode.G.value
-            lane.value = Lane.C.value
-            sleep(DELAY)
-
-    except KeyboardInterrupt:
-        print("WARNING: Keyboard interrupt detected")
-        # Set the event to signal all threads to stop
-        stop_protocol.set()
-
-
 if __name__ == "__main__":
+    OTHER_IP = "192.168.50.201"  # TODO: change this for other robot!
+
+    event_send_data = Event()  # Global variable to indicate new data is available
+    event_stop_protocol = Event()  # Global variable to indicate if threads should stop
+
+    def _test_state_updates():
+        try:
+            # Dummy global variables to test this function
+            for i in range(10):
+                global_x.value = i
+                global_y.value = i + 1
+                global_theta.value = i + 2
+                global_mode.value = Mode.L.value
+                global_lane.value = Lane.A.value
+                event_send_data.set()
+                sleep(0.1)
+
+        except KeyboardInterrupt:
+            print("WARNING: Keyboard interrupt detected")
+
+    # global variables for our robot
+    global_x = Value("f", 0.0)
+    global_y = Value("f", 0.0)
+    global_theta = Value("f", 90.0)  # could be 0 to start off with
+    global_mode = Value("i", Mode.L.value)  # either L or G. start in loading zone
+    global_lane = Value("i", Lane.A.value)  # either A B or C
+
+    # global variables for other robot
+    global_other_x = Value("f", 0.0)
+    global_other_y = Value("f", 0.0)
+    global_other_theta = Value("f", 90.0)
+    global_other_mode = Value("i", Mode.L.value)
+    global_other_lane = Value("i", Lane.A.value)
+
     # Create server and client threads
-    server_thread = Thread(target=p_server)
-    client_thread = Thread(target=p_client)
+    t_server = Thread(target=server, args=(event_stop_protocol,))
+    t_client = Thread(
+        target=client,
+        args=(event_stop_protocol, event_send_data, OTHER_IP),
+    )
+
+    # !!!!!!!!!! START THREADS !!!!!!!!!!
 
     # Start threads
-    server_thread.start()
-    client_thread.start()
+    t_server.start()
+    t_client.start()
 
     # Test the state updates
     _test_state_updates()
 
     # Set the event to signal all threads to stop
-    stop_protocol.set()
+    event_stop_protocol.set()
+    event_send_data.set()  # wake up client thread to finish (this is not the best but it works)
 
     # Wait for threads to finish
-    server_thread.join()
-    client_thread.join()
+    t_server.join()
+    t_client.join()
 
     print("INFO: all threads finished!")

@@ -38,7 +38,8 @@ server_thread.join()
 client_thread.join()
 ```
 
-And include the following import modules to handle threading and defining the global variables (including importing the protocol.py file itself):
+And include the following import modules to handle threading and defining the
+global variables (including importing the protocol.py file itself):
 
 ```python
 from threading import Thread
@@ -60,11 +61,11 @@ INFO: server started at 192.168.50.201 on port 12345
 INFO: data received {'x': 0.0, 'y': 1.0, 'theta': 2.0, 'mode': 0, 'lane': 0}
 INFO: data received {'x': 1.0, 'y': 2.0, 'theta': 3.0, 'mode': 0, 'lane': 0}
 INFO: data received {'x': 2.0, 'y': 3.0, 'theta': 4.0, 'mode': 0, 'lane': 0}
-INFO: data received {'x': 2.0, 'y': 3.0, 'theta': 4.0, 'mode': 0, 'lane': 0}
 INFO: data received {'x': 3.0, 'y': 4.0, 'theta': 5.0, 'mode': 0, 'lane': 0}
 INFO: data received {'x': 4.0, 'y': 5.0, 'theta': 6.0, 'mode': 0, 'lane': 0}
 INFO: data received {'x': 5.0, 'y': 6.0, 'theta': 7.0, 'mode': 0, 'lane': 0}
 INFO: data received {'x': 6.0, 'y': 7.0, 'theta': 8.0, 'mode': 0, 'lane': 0}
+INFO: data received {'x': 7.0, 'y': 8.0, 'theta': 9.0, 'mode': 0, 'lane': 0}
 INFO: data received {'x': 8.0, 'y': 9.0, 'theta': 10.0, 'mode': 0, 'lane': 0}
 INFO: data received {'x': 9.0, 'y': 10.0, 'theta': 11.0, 'mode': 0, 'lane': 0}
 INFO: closed client socket
