@@ -47,6 +47,12 @@ from multiprocessing import Value, Event
 import protocol
 ```
 
+And after updating the global variables for x, y, theta, mode and lane, make sure to set the event:
+
+```python
+protocol.event_send_data.set()
+```
+
 ### 3. Receive State Updates
 
 To test the protocol you can run the `protocol.py` file. This will send 10 state updates to the other robot.

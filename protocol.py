@@ -98,7 +98,8 @@ def client(event_stop_protocol, event_send_data, ip, port=12345):
 
 
 if __name__ == "__main__":
-    OTHER_IP = "192.168.50.201"  # TODO: change this for other robot!
+    # OTHER_IP = "192.168.50.201"  # TODO: change this for other robot!
+    OTHER_IP = "127.0.0.1" # Loopback testing IP
 
     event_send_data = Event()  # Global variable to indicate new data is available
     event_stop_protocol = Event()  # Global variable to indicate if threads should stop
@@ -106,7 +107,7 @@ if __name__ == "__main__":
     def _test_state_updates():
         try:
             # Dummy global variables to test this function
-            for i in range(10):
+            for i in range(20):
                 global_x.value = i
                 global_y.value = i + 1
                 global_theta.value = i + 2
